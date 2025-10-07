@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Document Hub</title>
+  <style>
+    :root{
+      --bg:#0b0b0f;
+      --panel:#0f0f16;
+      --text:#e9e9f1;
+      --muted:#a8a8c2;
+      --border:rgba(148,128,255,.7);
+      --hl:#8a5cff; /* default purple */
+      --radius:16px;
+      --shadow:0 0 0 2px var(--hl), 0 10px 30px rgba(0,0,0,.35);
+      --cardShadow:0 0 0 2px var(--hl);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .container{max-width:1200px;margin:28px auto;padding:12px 16px;border-radius:20px;border:2px solid var(--hl);min-height:calc(100% - 56px);position:relative}
+
+    /* Top bar */
+    .top{display:flex;align-items:center;gap:12px}
+    .title{font-size:36px;font-weight:700;padding:10px 20px;border-radius:14px;border:2px solid var(--hl);display:inline-flex;align-items:center;gap:10px}
+    .spacer{flex:1}
+    .iconbtn{border:2px solid var(--hl);border-radius:14px;background:transparent;color:var(--text);padding:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s transform ease, .15s background ease}
+    .iconbtn:hover{background:color-mix(in hsl, var(--hl) 20%, transparent);transform:translateY(-1px)}
+
+    /* Grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:26px;margin-top:28px}
+    .tile{border-radius:14px;border:2px solid var(--hl);padding:18px 20px;background:#0a0a12;box-shadow:var(--cardShadow);cursor:pointer;transition:.15s transform ease, .15s box-shadow ease}
+    .tile:hover{transform:translateY(-2px);box-shadow:0 0 0 3px var(--hl)}
+    .tile .label{font-size:22px;font-weight:700}
+    .muted{color:var(--muted)}
+
+    /* Big plus tile */
+    .plus{display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;min-height:84px}
+
+    /* Section view */
+    .sectionbar{display:flex;align-items:center;gap:14px;margin-top:4px}
+    .back{border:2px solid var(--hl);border-radius:12px;padding:10px 14px;background:transparent;color:var(--text);cursor:pointer}
+    .sectionTitle{margin:0 auto;font-size:30px;font-weight:800;border:2px solid var(--hl);padding:8px 18px;border-radius:12px;text-align:center;}
+
+    .leftActions{margin-top:26px}
+    .primary{border:2px solid var(--hl);background:transparent;color:var(--text);border-radius:12px;padding:10px 18px;font-size:18px;cursor:pointer}
+
+    /* Item list */
+    .list{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+    .item{border:2px solid var(--hl);border-radius:14px;padding:14px 14px 16px 14px;background:#0a0a12}
+    .itemHead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .itemHead .icon{width:22px;height:22px}
+    .itemName{font-weight:700}
+    .itemMeta{font-size:12px;color:var(--muted)}
+
+    /* New menu (Drive-like) */
+    .menu{position:absolute;background:#14141e;border:2px solid var(--hl);border-radius:10px;box-shadow:var(--shadow);min-width:240px;padding:6px;display:none;z-index:40}
+    .menu.open{display:block}
+    .menu hr{border:0;height:1px;background:color-mix(in hsl, var(--hl) 35%, transparent);margin:6px 0}
+    .menuItem{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer}
+    .menuItem:hover{background:color-mix(in hsl, var(--hl) 20%, transparent)}
+    .menuItem .miIcon{width:18px;height:18px}
+
+    /* Settings modal */
+    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);z-index:50}
+    .modal.open{display:grid}
+    .dialog{background:#13131c;border:2px solid var(--hl);border-radius:16px;min-width:320px;padding:18px}
+    .swatchRow{display:flex;gap:12px;margin-top:10px}
+    .swatch{width:44px;height:44px;border-radius:10px;border:2px solid currentColor;cursor:pointer;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff}
+    .swatch[data-color="purple"]{background:#8a5cff}
+    .swatch[data-color="red"]{background:#ff4d4d}
+    .swatch[data-color="green"]{background:#37d172}
+    .swatch[data-color="blue"]{background:#4da6ff}
+    .row{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:14px}
+
+    /* Utility */
+    .hidden{display:none !important}
+    .pill{padding:2px 8px;border:1px solid var(--hl);border-radius:999px}
+    a{color:inherit}
+  .tile .actions{display:flex;gap:10px;margin-top:10px}
+    .danger{border-color:#ff4d4d;color:#ffdad6}
+    .danger:hover{background:color-mix(in hsl, #ff4d4d 20%, transparent)}
+  </style>
+</head>
+<body>
+  <div class="container" id="app"></div>
+
+  <!-- Settings modal -->
+  <div class="modal" id="settingsModal" aria-hidden="true">
+    <div class="dialog">
+      <h2 style="margin:0 0 6px 0">Settings</h2>
+      <div class="muted">Highlight color</div>
+      <div class="swatchRow">
+        <button class="swatch" data-color="purple" title="Purple">PRP</button>
+        <button class="swatch" data-color="red" title="Red">RED</button>
+        <button class="swatch" data-color="green" title="Green">GRN</button>
+        <button class="swatch" data-color="blue" title="Blue">BLU</button>
+      </div>
+      <div class="row"><button class="primary" id="closeSettings">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Context new menu -->
+  <div class="menu" id="newMenu" role="menu" aria-hidden="true"></div>
+
+<script>
+(function(){
+  const appEl = document.getElementById('app');
+  const modal = document.getElementById('settingsModal');
+  const newMenu = document.getElementById('newMenu');
+
+  // ---------- Data layer (localStorage) ----------
+  const KEY='hubData.v1';
+  const defaults={highlight:'purple',sections:[]};
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(KEY)) || {...defaults}; }
+    catch(e){ return {...defaults}; }
+  }
+  function save(state){ localStorage.setItem(KEY, JSON.stringify(state)); }
+  let state = load();
+
+  // Apply highlight color to CSS vars
+  const COLORS={
+    purple:'#8a5cff', red:'#ff4d4d', green:'#37d172', blue:'#4da6ff'
+  };
+  function setHighlight(name){
+    const val = COLORS[name] || COLORS.purple;
+    document.documentElement.style.setProperty('--hl', val);
+    state.highlight = name; save(state);
+  }
+  setHighlight(state.highlight);
+
+  // ---------- UI builders ----------
+  function svgIcon(pathD){
+    return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${pathD}"/></svg>`
+  }
+  const gear = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09c.69 0 1.3-.4 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06c.48.48 1.18.63 1.82.33.61-.26 1-0.87 1-1.56V3a2 2 0 1 1 4 0v.09c0 .69.39 1.3 1 1.56.64.3 1.34.15 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06c-.48.48-.63 1.18-.33 1.82.26.61.87 1 1.56 1H21a2 2 0 1 1 0 4h-.09c-.69 0-1.3.39-1.51 1Z"/></svg>';
+
+  // Main view
+  function renderMain(){
+    appEl.innerHTML = `
+      <div class="top">
+        <div class="title">Document Hub</div>
+        <div class="spacer"></div>
+        <button class="iconbtn" id="openSettings" title="Settings">${gear}</button>
+      </div>
+      <div class="grid" id="sectionGrid"></div>
+    `;
+    document.getElementById('openSettings').onclick = ()=> openSettings();
+    const grid = document.getElementById('sectionGrid');
+
+    // Existing sections
+    state.sections.forEach(sec=>{
+      const el = document.createElement('div');
+      el.className='tile';
+      el.innerHTML=`<div class=\"label\">${escapeHtml(sec.name)}</div>
+                     <div class=\"muted\">${sec.items.length} item${sec.items.length!==1?'s':''}</div>
+                     <div class=\"actions\">
+                       <button class=\"primary openBtn\">Open</button>
+                       <button class=\"primary danger delBtn\">Delete</button>
+                     </div>`;
+      el.onclick = ()=> renderSection(sec.id);
+      const openBtn = el.querySelector('.openBtn');
+      const delBtn  = el.querySelector('.delBtn');
+      openBtn.addEventListener('click', (e)=>{ e.stopPropagation(); renderSection(sec.id); });
+      delBtn.addEventListener('click', (e)=>{ e.stopPropagation(); deleteSection(sec.id); });
+      grid.appendChild(el);
+    });
+
+    // The single + Section tile
+    const add = document.createElement('div');
+    add.className='tile plus';
+    add.innerHTML = '+ Section';
+    add.onclick = ()=> promptNewSection();
+    grid.appendChild(add);
+  }
+
+  function promptNewSection(){
+    const name = prompt('Section name');
+    if(!name) return;
+    const id = crypto.randomUUID();
+    state.sections.push({id, name: name.trim(), items: []});
+    save(state);
+    renderMain();
+  }
+
+  // Section view
+  function renderSection(id){
+    const sec = state.sections.find(s=>s.id===id);
+    if(!sec){ renderMain(); return; }
+
+    appEl.innerHTML = `
+      <div class="sectionbar">
+        <button class="back" id="backBtn">← Back</button>
+        <h1 class="sectionTitle" id="secTitle">${escapeHtml(sec.name)}</h1>
+        <div class="spacer"></div>
+      </div>
+      <div class="leftActions">
+        <button class="primary" id="newBtn">+ New</button>
+      </div>
+      <div class="list" id="itemList"></div>
+    `;
+    document.getElementById('backBtn').onclick = renderMain;
+    document.getElementById('newBtn').onclick = (e)=> openNewMenu(e.currentTarget, sec);
+    renderItems(sec);
+  }
+
+  function renderItems(sec){
+    const list = document.getElementById('itemList');
+    list.innerHTML='';
+    if(sec.items.length===0){
+      const empty = document.createElement('div');
+      empty.className='muted';
+      empty.textContent='No items yet';
+      list.appendChild(empty);
+      return;
+    }
+    sec.items.forEach(it=>{
+      const d = document.createElement('div');
+      d.className='item';
+      d.innerHTML = `
+        <div class="itemHead">
+          <span class="icon">${typeIcon(it.type)}</span>
+          <span class="itemName">${escapeHtml(it.name)}</span>
+          <span class="spacer"></span>
+          <button class="primary" data-id="${it.id}" data-action="rename">Rename</button>
+          <button class="primary" data-id="${it.id}" data-action="delete">Delete</button>
+        </div>
+        <div class="itemMeta">${it.type} • created ${new Date(it.created).toLocaleString()}</div>
+      `;
+      d.querySelector('[data-action="rename"]').onclick = ()=> renameItem(sec, it);
+      d.querySelector('[data-action="delete"]').onclick = ()=> deleteItem(sec, it);
+      list.appendChild(d);
+    });
+  }
+
+  function renameItem(sec,it){
+    const n = prompt('Rename item', it.name);
+    if(!n) return;
+    it.name = n.trim(); save(state); renderItems(sec);
+  }
+  function deleteItem(sec,it){
+    if(!confirm('Delete "'+it.name+'"?')) return;
+    sec.items = sec.items.filter(x=>x.id!==it.id); save(state); renderItems(sec);
+  }
+
+  // New menu
+  const NEW_OPTIONS=[
+    {key:'folder', label:'New folder', icon:'M3 7h18M7 7V5a2 2 0 0 1 2-2h2l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z'},
+    {hr:true},
+    {key:'fileUpload', label:'File upload', icon:'M12 3v12m0 0 4-4m-4 4-4-4M4 17h16v4H4z'},
+    {key:'folderUpload', label:'Folder upload', icon:'M21 15v6H3v-6m9-12 3 3h6v6H3V6h8z'},
+    {hr:true},
+    {key:'doc', label:'Google Docs', icon:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6'},
+    {key:'sheet', label:'Google Sheets', icon:'M3 3h18v18H3z M7 3v18 M3 8h18 M11 8v13'},
+    {key:'slide', label:'Google Slides', icon:'M4 5h16v12H4z M8 9h8v4H8z'},
+    {key:'video', label:'Google Vids', icon:'M3 5h12v14H3z M15 10l6-3v10l-6-3z'},
+    {key:'form', label:'Google Forms', icon:'M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h6'},
+  ];
+
+  function openNewMenu(anchor, sec){
+    const rect = anchor.getBoundingClientRect();
+    newMenu.style.left = (rect.left+window.scrollX)+ 'px';
+    newMenu.style.top  = (rect.bottom+8+window.scrollY)+ 'px';
+    newMenu.innerHTML = '';
+    NEW_OPTIONS.forEach(opt=>{
+      if(opt.hr){ const hr=document.createElement('hr'); newMenu.appendChild(hr); return; }
+      const mi=document.createElement('div'); mi.className='menuItem';
+      mi.innerHTML = `<span class="miIcon">${svgIcon(opt.icon)}</span><span>${opt.label}</span>`;
+      mi.onclick = ()=> { handleNew(opt.key, sec); closeNewMenu(); };
+      newMenu.appendChild(mi);
+    });
+    newMenu.classList.add('open');
+    document.addEventListener('click', clickAwayNewMenu, {once:true});
+  }
+  function closeNewMenu(){ newMenu.classList.remove('open'); }
+  function clickAwayNewMenu(e){ if(!newMenu.contains(e.target)) closeNewMenu(); }
+
+  function handleNew(key, sec){
+    if(key==='fileUpload'){
+      const inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.onchange=()=>{
+        [...inp.files].forEach(f=> addItem(sec,{type:'file', name:f.name}));
+      }; inp.click(); return;
+    }
+    if(key==='folderUpload'){
+      alert('Folder upload is simulated in this demo. Create a new folder and then add files into it.');
+      return;
+    }
+    if(key==='folder'){
+      const n=prompt('Folder name','New folder'); if(!n) return; addItem(sec,{type:'folder', name:n}); return;
+    }
+    const map={doc:'Google Doc', sheet:'Google Sheet', slide:'Google Slide', video:'Google Vid', form:'Google Form'};
+    const n = prompt('Name your '+map[key], map[key]); if(!n) return;
+    addItem(sec,{type:map[key].toLowerCase(), name:n});
+  }
+
+  function addItem(sec, payload){
+    sec.items.push({id:crypto.randomUUID(), name:payload.name, type:payload.type, created:Date.now()});
+    save(state); renderItems(sec);
+  }
+
+  function typeIcon(type){
+    const T={
+      'google doc':'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6',
+      'google sheet':'M3 3h18v18H3z M7 3v18 M3 8h18 M11 8v13',
+      'google slide':'M4 5h16v12H4z M8 9h8v4H8z',
+      'google vid':'M3 5h12v14H3z M15 10l6-3v10l-6-3z',
+      'google form':'M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h6',
+      'folder':'M3 7h18M7 7V5a2 2 0 0 1 2-2h2l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z',
+      'file':'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6'
+    };
+    return svgIcon(T[type]||T.file);
+  }
+
+  // Settings modal
+  function openSettings(){ modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); }
+  function closeSettings(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+  document.getElementById('closeSettings').onclick = closeSettings;
+  modal.addEventListener('click', (e)=>{ if(e.target===modal) closeSettings(); });
+  modal.querySelectorAll('.swatch').forEach(btn=>{
+    btn.addEventListener('click', ()=> setHighlight(btn.dataset.color));
+  });
+  // Delete section helper
+  function deleteSection(id){
+    const sec = state.sections.find(s=>s.id===id);
+    if(!sec) return;
+    if(!confirm('Delete section \''+sec.name+'\' and all its items?')) return;
+    state.sections = state.sections.filter(s=>s.id!==id);
+    save(state);
+    renderMain();
+  }
+
+  // util
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+  // Kick off
+  renderMain();
+})();
+</script>
+</body>
+</html>
